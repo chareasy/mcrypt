@@ -11,7 +11,9 @@
 	*	Author:					Sak32009 (skype: sak32009)
 	*	Description:			Encrypt/Decrypt your data
 	*	Programming Language:	PHP5
-	*	Version:				0.03final # 31/08/2014
+	*	Version:				0.04final # 09/09/2014
+	*
+	*	Thanks to: Relyze, xSplit
 	*
 	* ********************************** Instructions ***********************************
 	*
@@ -19,37 +21,41 @@
 	*
 	*************************************************************************************/
 
-class mcrypt{
+abstract class mcrypt{
+
+    abstract protected function getAlgo();
+    abstract protected function getCipher();
+    abstract protected function getMode();
+    abstract protected function getIV();
+    abstract protected function getOutputType();
 
 	/* DON'T TOUCH */
-	private $key, $iv_size, $mc;
+	private $key, $iv_size;
 
 	/*************************************************************************************/
-	public function __construct($str, $mc){
+	public function __construct($str){
 
-		$this->mc = $mc;
-
-		$this->iv_size = mcrypt_get_iv_size($this->mc->cipher, $this->mc->mode);
+		$this->iv_size = mcrypt_get_iv_size($this->getCipher(), $this->getMode());
 		$this->key = $this->key($str);
 
 	}
 
 	private function key($str){
 
-		return substr(hash($this->mc->algo, $str), 0, $this->iv_size);
+		return substr(hash($this->getAlgo(), $str), 0, $this->iv_size);
 
 	}
 
 	private function output($str, $m = 0){
 
-		return $this->mc->ot ? ($m ? base64_encode($str) : base64_decode($str)) : ($m ? bin2hex($str) : hex2bin($str));
+		return $this->getOutputType() ? ($m ? base64_encode($str) : base64_decode($str)) : ($m ? bin2hex($str) : hex2bin($str));
 
 	}
 
 	public function encrypt($str){
 
-		$iv = mcrypt_create_iv($this->iv_size, $this->mc->iv);
-		$output = mcrypt_encrypt($this->mc->cipher, $this->key, $str, $this->mc->mode, $iv);
+		$iv = mcrypt_create_iv($this->iv_size, $this->getIV());
+		$output = mcrypt_encrypt($this->getCipher(), $this->key, $str, $this->getMode(), $iv);
 
 		return $this->output($iv . $output, 1); // iv - encrypt
 
@@ -61,7 +67,7 @@ class mcrypt{
 		$iv = substr($str, 0, $this->iv_size);
 		$text = substr($str, $this->iv_size);
 
-		$output = mcrypt_decrypt($this->mc->cipher, $this->key, $text, $this->mc->mode, $iv);
+		$output = mcrypt_decrypt($this->getCipher(), $this->key, $text, $this->getMode(), $iv);
 
 		return strlen($str) < $this->iv_size ? false : rtrim($output, "\0");
 
@@ -70,67 +76,57 @@ class mcrypt{
 }
 
 // EXAMPLE 1
-class example_1_settings{
+class Rijndael128 extends mcrypt{
 
-	public $algo = 'sha512';				// http://php.net/manual/en/function.hash-algos.php
-	public $cipher = MCRYPT_RIJNDAEL_128;	// http://php.net/manual/it/mcrypt.ciphers.php
-	public $mode = MCRYPT_MODE_CBC;			// http://php.net/manual/en/mcrypt.constants.php
-	public $iv = MCRYPT_RAND; /*
+	// http://php.net/manual/en/function.hash-algos.php
+    protected function getAlgo(){ return 'sha512'; }
+
+	// http://php.net/manual/it/mcrypt.ciphers.php
+    protected function getCipher(){ return MCRYPT_RIJNDAEL_128; }
+
+	// http://php.net/manual/en/mcrypt.constants.php
+    protected function getMode(){ return MCRYPT_MODE_CBC; }
+
+	/*
 
 		MCRYPT_RAND: system random number generator(windows only)
 		MCRYPT_DEV_RANDOM: read data from /dev/random
 		MCRYPT_DEV_URANDOM: read data from /dev/urandom
 
 	*/
-	public $ot = 0; /*
+    protected function getIV(){ return MCRYPT_RAND; }
+
+	/*
 
 		0: hex
 		1: base64
 
 	*/
+    protected function getOutputType(){ return 0; }
 
 }
 
-$example_1_settings = new example_1_settings();
-$example_1 = new mcrypt('!!salt!!', $example_1_settings);
-$example_1_encrypt = $example_1->encrypt('sak32009');
-$example_1_decrypt = $example_1->decrypt($example_1_encrypt);
+$ex1 = new Rijndael128('-----------SALT----------'); // edit salt
+$ex1_e = $ex1->encrypt('test Rijndael128');
+$ex1_d = $ex1->decrypt($ex1_e);
 
-echo "algo: ".$example_1_settings->algo."<br>
-cipher: ".$example_1_settings->cipher."<br>
-mode: ".$example_1_settings->mode."<br>
-iv: ".$example_1_settings->iv."<br>
-ot: ".$example_1_settings->ot."<br>
-<b>Example 1 Encrypt:</b> ";
-var_dump($example_1_encrypt);
-echo "<br><br><b>Example 1 Decrypt:</b> ";
-var_dump($example_1_decrypt);
+echo "<b>".$ex1_d."(hex)</b>: ".$ex1_e."<br><br><br>";
 
 // EXAMPLE 2
-echo "<br><br><br>";
-class example_2_settings{
+class Rijndael256 extends mcrypt{
 
-	public $algo = 'sha512';
-	public $cipher = MCRYPT_RIJNDAEL_256;
-	public $mode = MCRYPT_MODE_CBC;
-	public $iv = MCRYPT_RAND;
-	public $ot = 1;
+    protected function getAlgo(){ return 'sha512'; }
+    protected function getCipher(){ return MCRYPT_RIJNDAEL_256; }
+    protected function getMode(){ return MCRYPT_MODE_CBC; }
+    protected function getIV(){ return MCRYPT_RAND; }
+    protected function getOutputType(){ return 1; }
 
 }
 
-$example_2_settings = new example_2_settings();
-$example_2 = new mcrypt('!!salt!!', $example_2_settings);
-$example_2_encrypt = $example_2->encrypt('sak32009');
-$example_2_decrypt = $example_2->decrypt($example_2_encrypt);
+$ex2 = new Rijndael256('-----------SALT----------'); // edit salt
+$ex2_e = $ex2->encrypt('test Rijndael256');
+$ex2_d = $ex2->decrypt($ex2_e);
 
-echo "algo: ".$example_2_settings->algo."<br>
-cipher: ".$example_2_settings->cipher."<br>
-mode: ".$example_2_settings->mode."<br>
-iv: ".$example_2_settings->iv."<br>
-ot: ".$example_2_settings->ot."<br>
-<b>Example 2 Encrypt:</b> ";
-var_dump($example_2_encrypt);
-echo "<br><br><b>Example 2 Decrypt:</b> ";
-var_dump($example_2_decrypt);
+echo "<b>".$ex2_d."(base64)</b>: ".$ex2_e;
 
 ?>
