@@ -1,0 +1,21 @@
+{
+    "name": "sak32009/mcrypt",
+    "description": "Create your personal encryption method!",
+    "license": "MIT",
+    "require": {
+        "php" : ">=5.4",
+		"ext-mcrypt" : "*"
+    },
+    "authors": [
+        {
+            "name": "Sak32009",
+            "homepage": "http://sak32009.com/",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "sak32009": "src/"
+        }
+    }
+}
